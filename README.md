@@ -25,7 +25,7 @@ What happens:
 From a file:
 
 ```bash
-./lanwhisper.py --domain corp.local --source /Users/osherassor/dns_internal_finder/list.txt
+./lanwhisper.py --domain corp.local --source ./list.txt
 ```
 
 Use a custom DNS server:
@@ -59,7 +59,7 @@ Concurrency and timeouts:
 Use shipped list:
 
 ```bash
-./lanwhisper.py --source /Users/osherassor/dns_internal_finder/list.txt
+./lanwhisper.py --source ./list.txt
 ```
 
 ### Stealth mode (minimal DNS footprint)
