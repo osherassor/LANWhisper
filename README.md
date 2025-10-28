@@ -1,0 +1,2 @@
+# LANWhisper
+Automated DNS Quaries
