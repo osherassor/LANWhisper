@@ -1,91 +1,101 @@
-## LANWhisper
+<h1 align="center">🔉 LANWhisper</h1>
 
-Small Python CLI for internal network discovery: given optional DNS servers and a list of common asset hostnames, it resolves records (A/AAAA and CNAME) to quickly identify interesting services inside a corporate network.
+<p align="center">
+  <strong>Quietly map a corporate network with nothing but DNS.</strong><br>
+  Point it at a domain (and optionally a DNS server), feed it a list of asset names, and it tells you what's live — A, AAAA, CNAME — fast or stealthy, your call.
+</p>
 
-### Install
+<p align="center">
+  <img src="https://img.shields.io/github/stars/osherassor/LANWhisper?style=for-the-badge&logo=github&color=ffd700" alt="Stars">
+  <img src="https://img.shields.io/github/last-commit/osherassor/LANWhisper?style=for-the-badge&logo=git&color=00d4aa" alt="Last commit">
+  <img src="https://img.shields.io/badge/python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/license-MIT-informational?style=for-the-badge" alt="License">
+</p>
+
+---
+
+## What is this?
+
+A small Python CLI for **internal network discovery via DNS**. Drop it on your tester laptop, give it the corporate DNS server and a list of common internal asset names (`vcenter`, `idrac`, `cyberark`, `wazuh`, …), and it tells you which ones actually resolve. Output is JSON / CSV / HTML / TXT — pick what fits your report.
+
+The point: instead of hammering the network with port scans on day one, ask DNS what's there. Quieter. Faster. Often more accurate, because devs reuse the same hostnames everywhere.
+
+## 🚀 Quick start
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
 
-### Quick start (no flags)
-
-```bash
+# Zero flags — uses system resolvers + built-in default asset list
 ./lanwhisper.py
 ```
 
-What happens:
-- Uses system DNS resolvers.
-- Uses built-in default asset list (common internal hostnames).
-- Creates per-run output folder: `./output/run_YYYYMMDD_HHMMSS_<id>/` with `results.json`, `results.csv`, `results.html`, `results.txt`.
-- Prints a summary table to the console.
+Each run creates `./output/run_YYYYMMDD_HHMMSS_<id>/` with `results.{json,csv,html,txt}` plus a console summary table.
 
-From a file:
+## 📖 Common workflows
 
 ```bash
-./lanwhisper.py --domain corp.local --source ./list.txt
-```
+# Internal sweep against corp DNS, custom asset list
+./lanwhisper.py --domain corp.local --server 10.0.0.53 --source ./list.txt
 
-Use a custom DNS server:
+# External sweep, more workers
+./lanwhisper.py --domain target.com --source ./list.txt --workers 128
 
-```bash
-./lanwhisper.py --server 10.0.0.53 --domain corp.local
-```
+# Tune timeouts and retries
+./lanwhisper.py --domain corp.local --workers 128 --timeout 2.0 --retries 2
 
-Write all outputs to a directory (per-run folder inside):
-
-```bash
+# Custom output location
 ./lanwhisper.py --domain corp.local --output /tmp/lanwhisper_out
 ```
 
-This creates a subfolder like `run_YYYYMMDD_HHMMSS_ab12cd34` containing: `results.json`, `results.csv`, `results.html`, `results.txt` (and prints a table to the console).
+## 🥷 Stealth mode
 
-Concurrency and timeouts:
-
-```bash
-./lanwhisper.py --domain corp.local --workers 128 --timeout 2.0 --retries 2
-```
-
-```
-
-### Defaults
-
-- `--domain` is optional. If not provided, assets without a dot are queried as-is.
-- If `--server`/`--dns` is not provided, system resolvers are used.
-- The tool can run with no flags at all using built-in defaults or `list.txt` if you provide `--source`.
-
-Use shipped list:
+Tries hard to look like background traffic:
 
 ```bash
-./lanwhisper.py --source ./list.txt
-```
-
-### Stealth mode (minimal DNS footprint)
-
-Stealth mode randomizes order, limits queries to A records, avoids following CNAMEs, and applies a low global QPS with jitter to blend into background traffic.
-
-```bash
-# Basic stealth: A only, no CNAME follow, low QPS with jitter
 ./lanwhisper.py --domain corp.local --stealth
-
-### Output files
-- `results.json`: full results including failures (exists=false).
-- `results.csv`: only successful resolutions (exists=true).
-- `results.html`: only successful resolutions (exists=true), styled table.
-- `results.txt`: plain-text table of all results for quick review.
 ```
 
-Notes for stealth:
-- Randomizes asset order to avoid recognizable sequences.
-- Default QPS in `--stealth` is 3 unless you set `--qps`.
-- Retries are disabled in `--stealth` unless you override `--retries`.
-- No CNAME following in `--stealth` (set `--types` and omit `--stealth` if you need deeper resolution).
+In stealth:
 
-### Notes
+- 🎲 **Randomized order** — no recognizable sequences hitting the resolver
+- 🅰️ **A records only** — no CNAME chasing
+- 🐌 **Low QPS with jitter** — default 3 qps, override with `--qps`
+- 🔁 **No retries by default** — override with `--retries`
 
-- If `--domain` is given and an asset has no dot, it queries `asset.domain`.
-- Without `--assets` or `--input`, a built-in list of common internal names is used.
-- If `rich` isn't installed, fallback plain-text table is printed.
+## 📤 Output files
 
+| File | Contains |
+|---|---|
+| `results.json` | Everything, including failures (`exists=false`) |
+| `results.csv` | Successful resolutions only — spreadsheet-ready |
+| `results.html` | Successful resolutions, styled table — drop into client reports |
+| `results.txt` | Plain-text table for terminal review |
+
+## 🛠️ Notes
+
+- `--domain` is optional. Without it, assets without a dot are queried as-is.
+- `--server` / `--dns` is optional. Without it, system resolvers are used.
+- Built-in asset list runs if you don't supply `--source`.
+- Falls back to plain-text output if `rich` isn't installed.
+
+## 🤝 Pairs well with
+
+- 📚 **[AwesomeWL — `subdomains/subdomains.txt`](https://github.com/osherassor/AwesomeWL)** — the **companion wordlist**. 10,065 entries balanced for hybrid corp networks: classic AD targets, modern SaaS, AI products, env/region/cluster matrix. Built specifically to be fed into LANWhisper.
+- 🏢 **[AD_Scanner_tool](https://github.com/osherassor/AD_Scanner_tool)** — once you've found the DCs and management hosts, point AD_Scanner at them.
+- 🗂️ **[smb_files_scanner](https://github.com/osherassor/smb_files_scanner)** — when LANWhisper finds `fileserver`, `dfs`, `backup-01`, pipe them in for content discovery.
+
+```bash
+# Common combo
+curl -sO https://raw.githubusercontent.com/osherassor/AwesomeWL/main/subdomains/subdomains.txt
+./lanwhisper.py --domain corp.local --server 10.0.0.53 --source ./subdomains.txt --stealth
+```
+
+## ⚖️ Responsible use
+
+Authorized engagements only. DNS recon is quiet, but it's still recon — make sure it's in scope.
+
+## 📄 License
+
+MIT
